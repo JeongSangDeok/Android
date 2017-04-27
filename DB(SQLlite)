@@ -1,0 +1,319 @@
+//http://blog.naver.com/PostView.nhn?blogId=hee072794&logNo=220619425456
+//http://itpangpang.xyz/175
+<MainDB.java>
+public class MainDB extends AppCompatActivity {
+
+    TextView result;
+    EditText etDate;
+    EditText etItem;
+    EditText etPrice;
+    Button db_insert;
+    Button db_update;
+    Button db_select;
+    Button db_delete;
+
+    int ver = 1;
+    DBHelper db_Helper;
+    SQLiteDatabase database;
+
+    MyFx FUN;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.db_main);
+        setUp();
+        db_insert.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String date = etDate.getText().toString();
+                String item = etItem.getText().toString();
+                int price = Integer.parseInt(etPrice.getText().toString());
+                db_Helper.insert("MoneyBook", date, item, price);
+                result.setText(db_Helper.getResult("MoneyBook"));
+            }
+        });
+
+        db_update.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String item = etItem.getText().toString();
+                int price = Integer.parseInt(etPrice.getText().toString());
+                db_Helper.update("MoneyBook", item, price);
+                result.setText(db_Helper.getResult("MoneyBook"));
+            }
+        });
+
+
+        db_delete.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String item = etItem.getText().toString();
+                db_Helper.delete("MoneyBook", item);
+                result.setText(db_Helper.getResult("MoneyBook"));
+            }
+        });
+
+        db_select.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                result.setText(db_Helper.getResult("MoneyBook"));
+            }
+        });
+    }
+
+    private void setUp() {
+        result = (TextView) findViewById(R.id.result);
+        etDate = (EditText) findViewById(R.id.date);
+        etItem = (EditText) findViewById(R.id.item);
+        etPrice = (EditText) findViewById(R.id.price);
+        etDate.setText(getTime());
+        db_insert = (Button) findViewById(R.id.insert); //데이터 삽입
+        db_update = (Button) findViewById(R.id.update); //Data 수정
+        db_delete = (Button) findViewById(R.id.delete); //DATA 삭제
+        db_select = (Button) findViewById(R.id.select); //DATA 조회
+
+        db_Helper = new DBHelper(getApplicationContext(), "MoneyBook.db", null, ver);
+    }
+
+    private String getTime() {
+        long now = System.currentTimeMillis();
+        Date date = new Date(now); //출력될 포맷 설정
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy년 MM월 dd일");
+        return simpleDateFormat.format(date);
+    }
+}
+
+
+<DBHelper.java>
+public class DBHelper extends SQLiteOpenHelper {
+
+    // DBHelper 생성자로 관리할 DB 이름과 버전 정보를 받음
+    public DBHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
+        super(context, name, factory, version); // 선언
+    }
+
+    // DB를 새로 생성할 때 호출되는 함수
+    @Override
+    public void onCreate(SQLiteDatabase db) {
+        createTable(db,"MoneyBook");
+    }
+
+    // DB 업그레이드를 위해 버전이 변경될 때 호출되는 함수
+    @Override
+    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+
+    }
+
+    public void createTable(SQLiteDatabase db, String table)
+    {
+        String sql = "CREATE TABLE " + table +" (_id INTEGER PRIMARY KEY AUTOINCREMENT, item TEXT, price INTEGER, create_at TEXT);";
+        try
+        {
+            db.execSQL(sql);
+        }
+        catch (SQLException e)
+        {
+        }
+    }
+
+    public void insert(String table, String create_at, String item, int price)
+    {
+        // 읽고 쓰기가 가능하게 DB 열기
+        SQLiteDatabase db = getWritableDatabase();
+        db.beginTransaction(); //첨가
+        try {
+            db.execSQL("INSERT INTO " + table + " VALUES(null, '" + item + "', " + price + ", '" + create_at + "');");
+            db.setTransactionSuccessful(); //첨가
+            //db.close();
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+        finally
+        {
+            db.endTransaction();
+        }
+
+    }
+
+    public void update(String table, String item, int price) {
+        SQLiteDatabase db = getWritableDatabase();
+        // 입력한 항목과 일치하는 행의 가격 정보 수정
+        db.beginTransaction(); //첨가
+        try {
+            db.execSQL("UPDATE " + table + " SET price=" + price + " WHERE item='" + item + "';");
+            db.setTransactionSuccessful();
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+        finally
+        {
+            db.endTransaction();
+        }
+    }
+
+    public void delete(String table, String item) {
+        SQLiteDatabase db = getWritableDatabase();
+        // 입력한 항목과 일치하는 행 삭제
+        db.beginTransaction();
+        try {
+            db.execSQL("DELETE FROM " + table + " WHERE item='" + item + "';");
+            db.setTransactionSuccessful();
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+        finally
+        {
+            db.endTransaction();
+        }
+    }
+
+    public String getResult(String table) {
+        // 읽기가 가능하게 DB 열기
+        SQLiteDatabase db = getReadableDatabase();
+        String result = "";
+
+
+        // DB에 있는 데이터를 쉽게 처리하기 위해 Cursor를 사용하여 테이블에 있는 모든 데이터 출력
+        Cursor cursor = db.rawQuery("SELECT * FROM " + table, null);
+        while (cursor.moveToNext()) {
+            result += cursor.getString(0)
+                    + " : "
+                    + cursor.getString(1)
+                    + " | "
+                    + cursor.getInt(2)
+                    + "원 "
+                    + cursor.getString(3)
+                    + "\n";
+        }
+
+        return result;
+    }
+
+}
+
+<db_main.xml>
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="날짜" />
+
+        <EditText
+            android:id="@+id/date"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="16dp"
+            android:clickable="false"
+            android:focusable="false" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="항목" />
+
+        <EditText
+            android:id="@+id/item"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="16dp" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="가격" />
+
+        <EditText
+            android:id="@+id/price"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="16dp"
+            android:inputType="number" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp">
+
+        <Button
+            android:id="@+id/insert"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="추가" />
+
+        <Button
+            android:id="@+id/delete"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="삭제" />
+
+        <Button
+            android:id="@+id/update"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="수정" />
+
+        <Button
+            android:id="@+id/select"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="조회" />
+
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_marginTop="16dp"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/sv">
+
+        <TextView
+            android:id="@+id/result"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+        <TableLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/tv9">
+        </TableLayout>
+    </ScrollView>
+</LinearLayout>
